@@ -206,9 +206,9 @@ describe('createInstantSearchManager', () => {
 
       // Skip this test with Algoliasearch API Client >= v4
       // (cache is handled by the client ifself)
-      if (searchClient.transporter) {
-        return;
-      }
+      // if (searchClient.transporter) {
+      //   return;
+      // }
 
       const resultsState = {
         metadata: [],

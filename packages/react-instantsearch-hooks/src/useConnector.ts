@@ -1,8 +1,12 @@
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { SearchParameters, SearchResults } from 'algoliasearch-helper';
+import { useMemo, useState } from 'react';
 
 import { useIndexContext } from './useIndexContext';
 import { useInstantSearchContext } from './useInstantSearchContext';
+import { useInstantSearchServerContext } from './useInstantSearchServerContext';
+import { useInstantSearchSsrContext } from './useInstantSearchSsrContext';
 import { useStableValue } from './useStableValue';
+import { useIsomorphicLayoutEffect } from './utils';
 import { createSearchResults } from './utils/createSearchResults';
 
 import type { Connector, WidgetDescription } from 'instantsearch.js';
@@ -14,6 +18,8 @@ export function useConnector<
   connector: Connector<TDescription, TProps>,
   props: TProps = {} as TProps
 ): TDescription['renderState'] {
+  const serverContext = useInstantSearchServerContext();
+  const ssrContext = useInstantSearchSsrContext();
   const search = useInstantSearchContext();
   const parentIndex = useIndexContext();
   const stableProps = useStableValue(props);
@@ -43,7 +49,19 @@ export function useConnector<
       // The helper exists because we've started InstantSearch.
       const helper = parentIndex.getHelper()!;
       const results =
-        parentIndex.getResults() || createSearchResults(helper.state);
+        ssrContext && ssrContext.initialResults
+          ? new SearchResults(
+              new SearchParameters(
+                ssrContext.initialResults[parentIndex.getIndexId()]._state
+              ),
+              ssrContext.initialResults[parentIndex.getIndexId()]._rawResults
+            )
+          : parentIndex.getResults() || createSearchResults(helper.state);
+      if (ssrContext && ssrContext.initialResults) {
+        // helper gets created in init, but that means it doesn't get the injected
+        // parameters, because those are from the lastResults
+        helper.state = results._state;
+      }
       const scopedResults = parentIndex
         .getScopedResults()
         .map((scopedResult) => {
@@ -85,13 +103,19 @@ export function useConnector<
 
   // We use a layout effect to add the widget to the index before the index
   // renders, otherwise it triggers 2 network requests.
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     parentIndex.addWidgets([widget]);
 
     return () => {
       parentIndex.removeWidgets([widget]);
     };
   }, [widget, parentIndex]);
+
+  // We directly add the widget when rendering on the server to be aware of
+  // its search parameters.
+  if (serverContext) {
+    parentIndex.addWidgets([widget]);
+  }
 
   return state;
 }

@@ -1,7 +1,7 @@
 import { Hit as AlgoliaHit } from '@algolia/client-search';
 import algoliasearch from 'algoliasearch/lite';
 import React from 'react';
-import { InstantSearch } from 'react-instantsearch-hooks';
+import { InstantSearch, useSearchState } from 'react-instantsearch-hooks';
 
 import { Hits, SearchBox, RefinementList } from './components';
 
@@ -11,6 +11,28 @@ const searchClient = algoliasearch(
   'latency',
   '6be0576ff61c053d5f9a3225e2a90f76'
 );
+
+function SearchState() {
+  const searchState = useSearchState();
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          searchState.setIndexUiState({
+            query: 'iphone',
+            refinementList: { brand: ['Apple'] },
+          });
+        }}
+      >
+        Trigger refinement change
+      </button>
+      <pre>
+        <code>{JSON.stringify(searchState, null, 2)}</code>
+      </pre>
+    </div>
+  );
+}
 
 type HitProps = {
   hit: AlgoliaHit<{
@@ -46,6 +68,9 @@ export function App() {
             searchablePlaceholder="Search brands"
             showMore={true}
           />
+
+          <h3>Search state</h3>
+          <SearchState />
         </div>
         <div style={{ display: 'grid', gap: '.5rem' }}>
           <SearchBox placeholder="Search" />

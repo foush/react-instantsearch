@@ -5,4 +5,5 @@ export * from './useConnector';
 export * from './useHits';
 export * from './useRefinementList';
 export * from './useSearchBox';
+export * from './useSearchResults';
 export * from './useSearchState';
